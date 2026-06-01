@@ -302,6 +302,26 @@ input[type="file"]{
     color:#475569;
 }
 
+.search-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr auto auto;
+    gap:12px;
+}
+
+.search-grid input{
+    padding:12px;
+    border:1px solid #cbd5e1;
+    border-radius:10px;
+    font-size:14px;
+}
+
+@media(max-width:768px){
+
+    .search-grid{
+        grid-template-columns:1fr;
+    }
+}
+
 /* ================= MOBILE ================= */
 
 @media(max-width:768px){
@@ -455,45 +475,146 @@ elseif($page == 'browse'){
 $search_topic = trim($_GET['topic'] ?? '');
 $search_faculty = trim($_GET['faculty'] ?? '');
 
-$res = $conn->query("
-SELECT topics.*, users.name AS faculty_name
+$sql = "
+SELECT
+    topics.*,
+    users.name AS faculty_name
 FROM topics
-JOIN faculty ON topics.faculty_id = faculty.faculty_id
-JOIN users ON faculty.user_id = users.id
+JOIN faculty
+ON topics.faculty_id = faculty.faculty_id
+JOIN users
+ON faculty.user_id = users.id
 WHERE topics.status='approved'
-");
+";
 
-// echo "
-// <div class='card'>
-// <h2>Browse Research Topics</h2>
-// <p>Select approved topics and apply easily.</p>
-// </div>
-// ";
+if(!empty($search_topic)){
+    $sql .= "
+    AND topics.title LIKE '%".$conn->real_escape_string($search_topic)."%'
+    ";
+}
+
+if(!empty($search_faculty)){
+    $sql .= "
+    AND users.name LIKE '%".$conn->real_escape_string($search_faculty)."%'
+    ";
+}
+
+/* LATEST TOPICS FIRST */
+
+$sql .= "
+ORDER BY topics.created_at DESC
+
+";
+
+$res = $conn->query($sql);
+
+?>
+
+<div class="card">
+
+<h2>Browse Research Topics</h2>
+
+<p>Search by topic name or faculty name.</p>
+
+<br>
+
+<form method="GET">
+
+<input type="hidden" name="page" value="browse">
+
+<div class="search-grid">
+
+<input
+type="text"
+name="topic"
+placeholder="Search Topic"
+value="<?= htmlspecialchars($search_topic) ?>"
+>
+
+<input
+type="text"
+name="faculty"
+placeholder="Search Faculty"
+value="<?= htmlspecialchars($search_faculty) ?>"
+>
+
+<button type="submit" class="btn">
+<i class="fa-solid fa-search"></i>
+Search
+</button>
+
+<a
+href="dashboard.php?page=browse"
+class="btn"
+style="background:#dc2626;"
+>
+Reset
+</a>
+
+</div>
+
+</form>
+
+</div>
+
+<?php
+
+if($res->num_rows > 0){
 
 while($row = $res->fetch_assoc()){
 
-echo "
-<div class='card topic-card'>
+?>
 
-<h3>".htmlspecialchars($row['title'])."</h3>
+<div class="card topic-card">
 
-<p>".htmlspecialchars($row['description'])."</p>
+<h3><?= htmlspecialchars($row['title']) ?></h3>
+
+<p><?= htmlspecialchars($row['description']) ?></p>
 
 <p>
 <b>Faculty:</b>
-".htmlspecialchars($row['faculty_name'])."
+<?= htmlspecialchars($row['faculty_name']) ?>
+</p>
+
+<p>
+<b>Skills:</b>
+<?= htmlspecialchars($row['skills_required']) ?>
+</p>
+
+<p>
+<b>Max Students:</b>
+<?= $row['max_students'] ?>
 </p>
 
 <br>
 
-<a class='btn'
-href='apply.php?topic_id={$row['topic_id']}'>
-<i class='fa-solid fa-paper-plane'></i>
+<a
+class="btn"
+href="apply.php?topic_id=<?= $row['topic_id'] ?>"
+>
+<i class="fa-solid fa-paper-plane"></i>
 Apply Now
 </a>
 
 </div>
-";
+
+<?php
+}
+
+}else{
+?>
+
+<div class="card">
+
+<h3>No Topics Found</h3>
+
+<p>
+No topic matches your search.
+</p>
+
+</div>
+
+<?php
 }
 
 }

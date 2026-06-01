@@ -23,6 +23,14 @@ WHERE user_id='$user_id'
 $student_id = $stu['student_id'];
 $student_skills = $stu['skills'];
 
+$profileIncomplete = false;
+
+if(
+    empty($stu['skills'])
+){
+    $profileIncomplete = true;
+}
+
 /* ================= COSINE SIMILARITY ================= */
 
 function cosineSimilarity($text1, $text2){
@@ -69,6 +77,14 @@ function cosineSimilarity($text1, $text2){
 if(isset($_POST['apply'])){
 
     $topic_id = intval($_POST['topic_id']);
+
+    if($profileIncomplete){
+
+        $message = "Please create your profile first and add your skills before applying.";
+        $message_type = "warning";
+    
+    }
+    else{
 
     /* CHECK IF STUDENT ALREADY HAS APPROVED TOPIC */
 
@@ -238,16 +254,17 @@ if($approvedCheck->num_rows > 0){
             VALUES
             (
                 '$user_id',
-                'No suitable faculty match found.',
+                'Not suitable for this research field based on your skills.',
                 'match'
             )
             ");
 
-            $message = "No suitable faculty found.";
+            $message = "Not suitable for this research field based on your skills.";
             $message_type = "danger";
         }
     }
 }       
+}
 }
 }
 /* ================= TOPICS ================= */

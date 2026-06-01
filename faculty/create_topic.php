@@ -353,6 +353,8 @@ My Research Fields
 
 <?php if($myTopics->num_rows > 0){ ?>
 
+<?php if($myTopics->num_rows > 0){ ?>
+
 <table style="
 width:100%;
 border-collapse:collapse;
@@ -416,117 +418,11 @@ Delete
 <p>No research fields created yet.</p>
 
 <?php } ?>
-<?php
-session_start();
-include "../db.php";
 
-if(!isset($_SESSION['user_id']) || $_SESSION['role'] != 'faculty'){
-    header("Location: ../login.php");
-    exit();
-}
-
-$user_id = $_SESSION['user_id'];
-
-$id = intval($_GET['id']);
-
-$conn->query("
-DELETE topics
-FROM topics
-JOIN faculty
-ON topics.faculty_id = faculty.faculty_id
-WHERE topics.topic_id='$id'
-AND faculty.user_id='$user_id'
-");
-
-header("Location: dashboard.php?page=create_topic");
-exit();
-?>
-
-<?php
-session_start();
-include "../db.php";
-
-if(!isset($_SESSION['user_id']) || $_SESSION['role']!='faculty'){
-    header("Location: ../login.php");
-    exit();
-}
-
-$id = intval($_GET['id']);
-
-$topic = $conn->query("
-SELECT *
-FROM topics
-WHERE topic_id='$id'
-")->fetch_assoc();
-
-if(isset($_POST['update'])){
-
-    $title = $_POST['title'];
-    $description = $_POST['description'];
-    $skills = $_POST['skills'];
-    $max = $_POST['max'];
-
-    $conn->query("
-    UPDATE topics
-    SET
-    title='$title',
-    description='$description',
-    skills_required='$skills',
-    max_students='$max',
-    status='pending'
-    WHERE topic_id='$id'
-    ");
-
-    header("Location: dashboard.php?page=create_topic");
-    exit();
-}
-?>
-
-<form method="POST">
-
-<input
-type="text"
-name="title"
-value="<?= htmlspecialchars($topic['title']) ?>"
-required>
-
-<br><br>
-
-<textarea
-name="description"
-required><?= htmlspecialchars($topic['description']) ?></textarea>
-
-<br><br>
-
-<input
-type="text"
-name="skills"
-value="<?= htmlspecialchars($topic['skills_required']) ?>"
-required>
-
-<br><br>
-
-<input
-type="number"
-name="max"
-value="<?= $topic['max_students'] ?>"
-required>
-
-<br><br>
-
-<button name="update">
-Update Topic
-</button>
-
-</form>
-
-    
 <script>
 
 const maxInput = document.getElementById("max_students");
-
 const limitMessage = document.getElementById("limitMessage");
-
 const fixedLimit = <?= $fixed_limit ?>;
 
 maxInput.addEventListener("input", function(){
@@ -536,10 +432,8 @@ maxInput.addEventListener("input", function(){
     if(value > fixedLimit){
 
         limitMessage.style.display = "block";
-
         limitMessage.innerHTML =
-        "Maximum allowed students is "
-        + fixedLimit;
+        "Maximum allowed students is " + fixedLimit;
 
         this.value = fixedLimit;
 
@@ -551,5 +445,6 @@ maxInput.addEventListener("input", function(){
 
 </script>
 
+</div>
 
 </div>

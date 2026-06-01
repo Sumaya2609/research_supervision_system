@@ -90,23 +90,33 @@ $faculty_id  = $faculty['faculty_id'] ?? 0;
 $stmt->close();
 
 /* ================= STATS ================= */
+/* ================= STATS ================= */
+
+/* Approved Students */
 $stmt = $conn->prepare("
     SELECT COUNT(*) AS total
     FROM applications a
     JOIN topics t ON a.topic_id = t.topic_id
-    WHERE t.faculty_id = ? AND a.status = 'approved'
+    WHERE t.faculty_id = ? AND a.status='approved'
 ");
 $stmt->bind_param("i", $faculty_id);
 $stmt->execute();
 $studentCount = $stmt->get_result()->fetch_assoc()['total'];
 $stmt->close();
 
+/* Total Applications */
 $stmt = $conn->prepare("
     SELECT COUNT(*) AS total
     FROM applications a
     JOIN topics t ON a.topic_id = t.topic_id
     WHERE t.faculty_id = ?
 ");
+$stmt->bind_param("i", $faculty_id);
+$stmt->execute();
+$appCount = $stmt->get_result()->fetch_assoc()['total'];
+$stmt->close();
+
+/* Total Research Fields */
 $stmt = $conn->prepare("
     SELECT COUNT(*) AS total
     FROM topics
@@ -117,11 +127,7 @@ $stmt->execute();
 $fieldCount = $stmt->get_result()->fetch_assoc()['total'];
 $stmt->close();
 
-$stmt->bind_param("i", $faculty_id);
-$stmt->execute();
-$appCount = $stmt->get_result()->fetch_assoc()['total'];
-$stmt->close();
-
+/* Notifications */
 $stmt = $conn->prepare("
     SELECT COUNT(*) AS total
     FROM notifications

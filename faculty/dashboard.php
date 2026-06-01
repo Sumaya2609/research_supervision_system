@@ -107,6 +107,16 @@ $stmt = $conn->prepare("
     JOIN topics t ON a.topic_id = t.topic_id
     WHERE t.faculty_id = ?
 ");
+$stmt = $conn->prepare("
+    SELECT COUNT(*) AS total
+    FROM topics
+    WHERE faculty_id = ?
+");
+$stmt->bind_param("i", $faculty_id);
+$stmt->execute();
+$fieldCount = $stmt->get_result()->fetch_assoc()['total'];
+$stmt->close();
+
 $stmt->bind_param("i", $faculty_id);
 $stmt->execute();
 $appCount = $stmt->get_result()->fetch_assoc()['total'];
@@ -371,6 +381,10 @@ $stmt->close();
         <div class="box">
             <h3><?= $notifCount ?></h3>
             <p>Unread Notifications</p>
+        </div>
+        <div class="box">
+            <h3><?= $fieldCount ?></h3>
+            <p>Research Fields</p>
         </div>
     </div>
 

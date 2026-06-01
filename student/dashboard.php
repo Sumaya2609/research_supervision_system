@@ -452,6 +452,9 @@ elseif($page == 'profile'){
 
 elseif($page == 'browse'){
 
+$search_topic = trim($_GET['topic'] ?? '');
+$search_faculty = trim($_GET['faculty'] ?? '');
+
 $res = $conn->query("
 SELECT topics.*, users.name AS faculty_name
 FROM topics

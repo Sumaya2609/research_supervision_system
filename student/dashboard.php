@@ -502,7 +502,11 @@ if(!empty($search_faculty)){
 /* LATEST TOPICS FIRST */
 
 $sql .= "
+<<<<<<< HEAD
 ORDER BY topics.topic_id DESC
+=======
+ORDER BY topics.created_at DESC
+>>>>>>> ff8f1c8e2111a47f077e73c0467b5e09ce4609ff
 
 ";
 
@@ -512,8 +516,14 @@ $res = $conn->query($sql);
 
 <div class="card">
 
+<<<<<<< HEAD
 <h2>Search by topic name and faculty name</h2>
 
+=======
+<h2>Browse Research Topics</h2>
+
+<p>Search by topic name or faculty name.</p>
+>>>>>>> ff8f1c8e2111a47f077e73c0467b5e09ce4609ff
 
 <br>
 
@@ -605,10 +615,17 @@ Apply Now
 
 <div class="card">
 
+<<<<<<< HEAD
 <h3>No Match Found</h3>
 
 <p>
 Nothing matches your search.
+=======
+<h3>No Topics Found</h3>
+
+<p>
+No topic matches your search.
+>>>>>>> ff8f1c8e2111a47f077e73c0467b5e09ce4609ff
 </p>
 
 </div>

@@ -353,6 +353,11 @@ My Research Fields
 
 <?php if($myTopics->num_rows > 0){ ?>
 
+<<<<<<< HEAD
+=======
+<?php if($myTopics->num_rows > 0){ ?>
+
+>>>>>>> ff8f1c8e2111a47f077e73c0467b5e09ce4609ff
 <table style="
 width:100%;
 border-collapse:collapse;
@@ -369,6 +374,7 @@ background:white;
 <?php while($topic = $myTopics->fetch_assoc()){ ?>
 
 <tr>
+<<<<<<< HEAD
     <td style="padding:12px;">
         <?= htmlspecialchars($topic['title']) ?>
     </td>
@@ -401,6 +407,44 @@ background:white;
         </a>
 
     </td>
+=======
+
+<td style="padding:12px;">
+<?= htmlspecialchars($topic['title']) ?>
+</td>
+
+<td>
+<?= ucfirst($topic['status']) ?>
+</td>
+
+<td>
+<?= $topic['max_students'] ?>
+</td>
+
+<td>
+
+<a
+href="edit_topic.php?id=<?= $topic['topic_id'] ?>"
+class="btn"
+style="padding:8px 12px;"
+>
+<i class="fa-solid fa-pen"></i>
+Edit
+</a>
+
+<a
+href="delete_topic.php?id=<?= $topic['topic_id'] ?>"
+class="btn"
+style="background:#dc2626;padding:8px 12px;"
+onclick="return confirm('Delete this topic?')"
+>
+<i class="fa-solid fa-trash"></i>
+Delete
+</a>
+
+</td>
+
+>>>>>>> ff8f1c8e2111a47f077e73c0467b5e09ce4609ff
 </tr>
 
 <?php } ?>
@@ -440,3 +484,8 @@ maxInput.addEventListener("input", function(){
 </script>
 
 </div>
+<<<<<<< HEAD
+=======
+
+</div>
+>>>>>>> ff8f1c8e2111a47f077e73c0467b5e09ce4609ff

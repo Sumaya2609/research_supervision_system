@@ -1,78 +1,221 @@
 <?php
-session_start();
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 include "../db.php";
 
-if($_SESSION['role'] != 'student'){
+/* ================= LOGIN CHECK ================= */
+
+if(
+    !isset($_SESSION['user_id']) ||
+    $_SESSION['role'] != 'student'
+){
     header("Location: ../login.php");
     exit();
 }
 
 $user_id = $_SESSION['user_id'];
 
-/* FIX: get student_id */
+/* ================= GET STUDENT ================= */
+
 $stu = $conn->query("
-SELECT student_id FROM students WHERE user_id='$user_id'
+SELECT student_id
+FROM students
+WHERE user_id='$user_id'
 ")->fetch_assoc();
 
-$student_id = $stu['student_id'];
+$student_id = $stu['student_id'] ?? 0;
 
-/* fetch reports */
-$res = $conn->query("
-SELECT reports.*, users.name AS faculty_name
+/* ================= FETCH REPORTS ================= */
+
+$reports = $conn->query("
+SELECT
+reports.*,
+users.name AS faculty_name
+
 FROM reports
-JOIN faculty ON faculty.faculty_id = reports.faculty_id
-JOIN users ON faculty.user_id = users.id
+
+JOIN faculty
+ON reports.faculty_id = faculty.faculty_id
+
+JOIN users
+ON faculty.user_id = users.id
+
 WHERE reports.student_id='$student_id'
+
 ORDER BY reports.report_date DESC
 ");
+
 ?>
 
-<!DOCTYPE html>
-<html>
-<head>
-<title>My Reports</title>
-
 <style>
-body{
-    background:#0f1f1c;
-    color:white;
-    font-family:'Segoe UI';
+
+.table-container{
+    overflow-x:auto;
 }
 
-.card{
-    width:80%;
-    margin:20px auto;
+table{
+    width:100%;
+    border-collapse:collapse;
     background:white;
-    color:black;
-    padding:20px;
-    border-radius:10px;
+    border-radius:18px;
+    overflow:hidden;
+    box-shadow:0 5px 20px rgba(0,0,0,0.05);
 }
+
+th{
+    background:#2563eb;
+    color:white;
+    padding:16px;
+    text-align:left;
+    font-size:15px;
+}
+
+td{
+    padding:16px;
+    border-bottom:1px solid #e2e8f0;
+    vertical-align:top;
+    color:#334155;
+}
+
+tr:hover{
+    background:#f8fafc;
+}
+
+.rating{
+    padding:6px 12px;
+    border-radius:30px;
+    font-size:13px;
+    font-weight:bold;
+    color:white;
+    display:inline-block;
+}
+
+.excellent{
+    background:#16a34a;
+}
+
+.good{
+    background:#2563eb;
+}
+
+.average{
+    background:#f59e0b;
+}
+
+.poor{
+    background:#dc2626;
+}
+
+.empty{
+    background:white;
+    border-radius:20px;
+    padding:50px;
+    text-align:center;
+    color:#94a3b8;
+    box-shadow:0 5px 20px rgba(0,0,0,0.05);
+}
+
+.empty i{
+    font-size:60px;
+    margin-bottom:20px;
+    color:#cbd5e1;
+}
+
 </style>
-</head>
-
-<body>
-
-<h2 style="text-align:center;">My Reports</h2>
-
-<?php if($res->num_rows == 0){ ?>
-<p style="text-align:center;">No reports yet</p>
-<?php } ?>
-
-<?php while($row=$res->fetch_assoc()){ ?>
 
 <div class="card">
 
-<h3><?php echo $row['faculty_name']; ?></h3>
+<h2 style="margin-bottom:25px;color:#2563eb;">
 
-<p><?php echo $row['feedback']; ?></p>
+<i class="fa-solid fa-chart-line"></i>
 
-<p><b>Rating:</b> <?php echo $row['rating']; ?></p>
+My Reports
 
-<p><small><?php echo $row['report_date']; ?></small></p>
+</h2>
+
+<?php if($reports && $reports->num_rows > 0){ ?>
+
+<div class="table-container">
+
+<table>
+
+<tr>
+<th>Faculty</th>
+<th>Feedback</th>
+<th>Rating</th>
+<th>Date</th>
+</tr>
+
+<?php while($row = $reports->fetch_assoc()){
+
+if($row['rating'] >= 5){
+    $class = "excellent";
+}
+elseif($row['rating'] >= 4){
+    $class = "good";
+}
+elseif($row['rating'] >= 3){
+    $class = "average";
+}
+else{
+    $class = "poor";
+}
+
+?>
+
+<tr>
+
+<td>
+<strong>
+<?= htmlspecialchars($row['faculty_name']); ?>
+</strong>
+</td>
+
+<td style="line-height:1.7;">
+<?= nl2br(htmlspecialchars($row['feedback'])); ?>
+</td>
+
+<td>
+
+<span class="rating <?= $class; ?>">
+
+<?= htmlspecialchars($row['rating']); ?>/5
+
+</span>
+
+</td>
+
+<td>
+
+<?= $row['report_date']; ?>
+
+</td>
+
+</tr>
+
+<?php } ?>
+
+</table>
+
+</div>
+
+<?php } else { ?>
+
+<div class="empty">
+
+<i class="fa-solid fa-file-circle-xmark"></i>
+
+<h3>No Reports Available</h3>
+
+<p>
+Your faculty feedback and ratings will appear here.
+</p>
 
 </div>
 
 <?php } ?>
 
-</body>
-</html>
+</div>

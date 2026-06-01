@@ -64,48 +64,6 @@ function countTasks($conn,$student_id,$status){
     return $q->fetch_assoc()['total'];
 }
 
-function countApps($conn,$student_id){
-
-    $q = $conn->query("
-    SELECT COUNT(*) as total
-    FROM applications
-    WHERE student_id='$student_id'
-    ");
-
-    return $q->fetch_assoc()['total'];
-}
-
-function avgRating($conn,$student_id){
-
-    $q = $conn->query("
-    SELECT AVG(
-        CASE
-            WHEN rating='Excellent' THEN 5
-            WHEN rating='Good' THEN 4
-            WHEN rating='Average' THEN 3
-            WHEN rating='Poor' THEN 2
-            ELSE 1
-        END
-    ) as avg_rating
-    FROM reports
-    WHERE student_id='$student_id'
-    ");
-
-    return round($q->fetch_assoc()['avg_rating'],1) ?: 0;
-}
-
-/* ================= SCORE ================= */
-
-function progressScore($apps,$submitted,$approved,$rating){
-
-    return round(
-        ($apps * 10) +
-        ($submitted * 15) +
-        ($approved * 20) +
-        ($rating * 15)
-    );
-}
-
 ?>
 
 <style>
@@ -183,42 +141,6 @@ function progressScore($apps,$submitted,$approved,$rating){
     font-size:15px;
 }
 
-.progress-bar{
-    width:100%;
-    height:10px;
-    background:#e2e8f0;
-    border-radius:20px;
-    overflow:hidden;
-    margin-top:18px;
-}
-
-.progress-fill{
-    height:100%;
-    border-radius:20px;
-}
-
-.strong{
-    background:#16a34a;
-}
-
-.medium{
-    background:#f59e0b;
-}
-
-.weak{
-    background:#dc2626;
-}
-
-.badge{
-    display:inline-block;
-    margin-top:18px;
-    padding:8px 16px;
-    border-radius:30px;
-    font-size:13px;
-    font-weight:bold;
-    color:white;
-}
-
 .empty{
     background:white;
     padding:40px;
@@ -231,6 +153,17 @@ function progressScore($apps,$submitted,$approved,$rating){
 .empty i{
     font-size:60px;
     margin-bottom:15px;
+}
+
+.rating-badge{
+    margin-top:18px;
+    display:inline-block;
+    background:#2563eb;
+    color:white;
+    padding:8px 16px;
+    border-radius:30px;
+    font-size:13px;
+    font-weight:bold;
 }
 
 </style>
@@ -253,53 +186,49 @@ Student Progress Analytics
 
 $student_id = $row['student_id'];
 
-$apps = countApps($conn,$student_id);
+/* ================= TASK COUNTS ================= */
 
-$submitted = countTasks(
-    $conn,
-    $student_id,
-    'submitted'
-);
+/* ================= TASK ANALYTICS ================= */
 
-$approved = countTasks(
-    $conn,
-    $student_id,
-    'approved'
-);
+/* Total tasks ever assigned */
 
-$rating = avgRating(
-    $conn,
-    $student_id
-);
+$assigned = $conn->query("
+SELECT COUNT(*) AS total
+FROM tasks
+WHERE student_id='$student_id'
+")->fetch_assoc()['total'];
 
-$score = progressScore(
-    $apps,
-    $submitted,
-    $approved,
-    $rating
-);
+/* Tasks that reached submitted stage */
 
-/* ================= STATUS ================= */
+$submitted = $conn->query("
+SELECT COUNT(*) AS total
+FROM tasks
+WHERE student_id='$student_id'
+AND status IN ('submitted','approved')
+")->fetch_assoc()['total'];
 
-if($score >= 120){
+/* Tasks approved */
 
-    $status = "Strong";
-    $class = "strong";
-    $width = "100%";
+$approved = $conn->query("
+SELECT COUNT(*) AS total
+FROM tasks
+WHERE student_id='$student_id'
+AND status='approved'
+")->fetch_assoc()['total'];
+/* ================= AVG RATING ================= */
 
-}
-elseif($score >= 70){
+/* ================= AVG RATING ================= */
 
-    $status = "Average";
-    $class = "medium";
-    $width = "70%";
+$q = $conn->query("
+SELECT AVG(rating) as avg_rating
+FROM reports
+WHERE student_id='$student_id'
+");
 
-}
-else{
+$rating = round($q->fetch_assoc()['avg_rating'],1);
 
-    $status = "Weak";
-    $class = "weak";
-    $width = "40%";
+if(!$rating){
+    $rating = 0;
 }
 
 ?>
@@ -334,9 +263,9 @@ Research Student
 
 <div class="stat">
 
-<span>Applications</span>
+<span>Assigned Tasks</span>
 
-<strong><?= $apps; ?></strong>
+<strong><?= $assigned; ?></strong>
 
 </div>
 
@@ -364,28 +293,11 @@ Research Student
 
 </div>
 
-<div class="stat">
-
-<span>Performance Score</span>
-
-<strong><?= $score; ?></strong>
-
 </div>
 
-</div>
+<span class="rating-badge">
 
-<div class="progress-bar">
-
-<div
-class="progress-fill <?= $class; ?>"
-style="width:<?= $width; ?>;">
-</div>
-
-</div>
-
-<span class="badge <?= $class; ?>">
-
-<?= $status; ?> Performance
+Performance Rating: <?= $rating; ?>/5
 
 </span>
 

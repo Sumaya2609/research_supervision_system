@@ -21,16 +21,35 @@ FROM faculty
 WHERE user_id='$user_id'
 ")->fetch_assoc();
 
-$faculty_id = $fac['faculty_id'];
+$faculty_id = $fac['faculty_id'] ?? 0;
+
+/* ================= CREATE UPLOAD FOLDER ================= */
+
+$uploadDir = "../uploads/";
+
+if(!is_dir($uploadDir)){
+    mkdir($uploadDir, 0777, true);
+}
 
 /* ================= STUDENTS ================= */
 
-$students = $conn->query("
-SELECT students.student_id, users.name
-FROM students
-JOIN users ON students.user_id = users.id
-ORDER BY users.name ASC
-");
+/* ================= STUDENTS ================= */
+
+    $students = $conn->query("
+    SELECT DISTINCT
+        students.student_id,
+        users.name
+    FROM applications
+    JOIN students
+        ON applications.student_id = students.student_id
+    JOIN users
+        ON students.user_id = users.id
+    JOIN topics
+        ON applications.topic_id = topics.topic_id
+    WHERE topics.faculty_id='$faculty_id'
+    AND applications.status='approved'
+    ORDER BY users.name ASC
+    ");
 
 /* ================= SUCCESS ================= */
 
@@ -40,16 +59,32 @@ $success = "";
 
 if(isset($_POST['assign_task'])){
 
-    $student_id = $_POST['student_id'];
+    $student_id = intval($_POST['student_id']);
+
     $title = trim($_POST['title']);
+
     $description = trim($_POST['description']);
 
-    $conn->query("
+    $stmt = $conn->prepare("
     INSERT INTO tasks
     (student_id, faculty_id, title, description, status)
-    VALUES
-    ('$student_id','$faculty_id','$title','$description','assigned')
+    VALUES (?,?,?,?,?)
     ");
+
+    $status = "assigned";
+
+    $stmt->bind_param(
+        "iisss",
+        $student_id,
+        $faculty_id,
+        $title,
+        $description,
+        $status
+    );
+
+    $stmt->execute();
+
+    /* NOTIFICATION */
 
     $user = $conn->query("
     SELECT user_id
@@ -57,10 +92,27 @@ if(isset($_POST['assign_task'])){
     WHERE student_id='$student_id'
     ")->fetch_assoc();
 
-    $conn->query("
-    INSERT INTO notifications (user_id,message,type)
-    VALUES ('{$user['user_id']}','New task assigned','task')
-    ");
+    if($user){
+
+        $msg = "New task assigned";
+
+        $type = "task";
+
+        $stmt2 = $conn->prepare("
+        INSERT INTO notifications
+        (user_id,message,type)
+        VALUES (?,?,?)
+        ");
+
+        $stmt2->bind_param(
+            "iss",
+            $user['user_id'],
+            $msg,
+            $type
+        );
+
+        $stmt2->execute();
+    }
 
     $success = "Task assigned successfully!";
 }
@@ -89,10 +141,19 @@ if(isset($_GET['approve'])){
     WHERE student_id='{$task['student_id']}'
     ")->fetch_assoc();
 
-    $conn->query("
-    INSERT INTO notifications (user_id,message,type)
-    VALUES ('{$user['user_id']}','Your task has been approved','task')
-    ");
+    if($user){
+
+        $conn->query("
+        INSERT INTO notifications
+        (user_id,message,type)
+        VALUES
+        (
+            '{$user['user_id']}',
+            'Your task has been approved',
+            'task'
+        )
+        ");
+    }
 
     $success = "Task approved successfully!";
 }
@@ -121,10 +182,19 @@ if(isset($_GET['reject'])){
     WHERE student_id='{$task['student_id']}'
     ")->fetch_assoc();
 
-    $conn->query("
-    INSERT INTO notifications (user_id,message,type)
-    VALUES ('{$user['user_id']}','Task rejected. Please resubmit.','task')
-    ");
+    if($user){
+
+        $conn->query("
+        INSERT INTO notifications
+        (user_id,message,type)
+        VALUES
+        (
+            '{$user['user_id']}',
+            'Task rejected. Please resubmit.',
+            'task'
+        )
+        ");
+    }
 
     $success = "Task rejected!";
 }
@@ -134,8 +204,10 @@ if(isset($_GET['reject'])){
 $res = $conn->query("
 SELECT tasks.*, users.name
 FROM tasks
-JOIN students ON tasks.student_id = students.student_id
-JOIN users ON students.user_id = users.id
+JOIN students
+ON tasks.student_id = students.student_id
+JOIN users
+ON students.user_id = users.id
 WHERE tasks.faculty_id='$faculty_id'
 ORDER BY task_id DESC
 ");
@@ -415,14 +487,14 @@ All Tasks
 
 <td>
 
-<?php if(!empty($row['file'])){ ?>
+<?php if(!empty($row['file']) && file_exists("../uploads/".$row['file'])){ ?>
 
 <a
 class="action-btn view-btn"
-target="_blank"
-href="../uploads/<?= $row['file']; ?>">
+download
+href="../uploads/<?= urlencode($row['file']); ?>">
 
-View File
+Download File
 
 </a>
 
@@ -436,12 +508,13 @@ View File
 
 <td>
 
-<?php if($row['status'] == 'submitted'){ ?>
+<?php if(trim(strtolower($row['status'])) == 'submitted'){ ?>
 
 <a
 class="action-btn approve-btn"
 href="?page=tasks&approve=<?= $row['task_id']; ?>">
 
+<i class="fa-solid fa-check"></i>
 Approve
 
 </a>
@@ -450,6 +523,7 @@ Approve
 class="action-btn reject-btn"
 href="?page=tasks&reject=<?= $row['task_id']; ?>">
 
+<i class="fa-solid fa-xmark"></i>
 Reject
 
 </a>

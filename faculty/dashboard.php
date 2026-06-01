@@ -338,19 +338,22 @@ $stmt->close();
 <div class="main">
 
     <!-- ================= TOPBAR ================= -->
-    <div class="topbar">
-        <div>
-            <h1><?= htmlspecialchars($current['title']) ?></h1>
-            <p><?= htmlspecialchars($current['subtitle']) ?></p>
-        </div>
-        <div>
-            <a href="javascript:history.back()" class="btn">
-                <i class="fa-solid fa-arrow-left"></i>
-                Back
-            </a>
-        </div>
+   <!-- ================= TOPBAR ================= -->
+<?php if($page != 'profile'): ?>
+<div class="topbar">
+    <div>
+        <h1><?= htmlspecialchars($current['title']) ?></h1>
+        <p><?= htmlspecialchars($current['subtitle']) ?></p>
     </div>
 
+    <div>
+        <a href="javascript:history.back()" class="btn">
+            <i class="fa-solid fa-arrow-left"></i>
+            Back
+        </a>
+    </div>
+</div>
+<?php endif; ?>
     <?php
 
     /* ================= HOME ================= */

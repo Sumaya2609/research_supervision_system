@@ -23,7 +23,15 @@ FROM students
 WHERE user_id='$user_id'
 ")->fetch_assoc();
 
-$student_id = $stu['student_id'];
+$student_id = $stu['student_id'] ?? 0;
+
+/* ================= CREATE UPLOAD FOLDER ================= */
+
+$uploadDir = "../uploads/";
+
+if(!is_dir($uploadDir)){
+    mkdir($uploadDir, 0777, true);
+}
 
 /* ================= SUCCESS MESSAGE ================= */
 
@@ -48,52 +56,74 @@ if(isset($_POST['upload'])){
             'pptx'
         ];
 
-        $file = $_FILES['file']['name'];
+        $originalName = $_FILES['file']['name'];
         $tmp = $_FILES['file']['tmp_name'];
 
-        $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+        $ext = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
 
         if(in_array($ext, $allowed)){
 
-            $fileName = time() . "_" . basename($file);
+            /* SAFE FILE NAME */
 
-            move_uploaded_file(
-                $tmp,
-                "../uploads/" . $fileName
-            );
+            $cleanName = preg_replace("/[^a-zA-Z0-9._-]/", "_", $originalName);
 
-            $conn->query("
-            UPDATE tasks
-            SET
-                file='$fileName',
-                status='submitted'
-            WHERE task_id='$task_id'
-            ");
+            $fileName = time() . "_" . $cleanName;
 
-            /* ================= NOTIFY FACULTY ================= */
+            $uploadPath = $uploadDir . $fileName;
 
-            $fac = $conn->query("
-            SELECT faculty.user_id
-            FROM tasks
-            JOIN faculty ON tasks.faculty_id = faculty.faculty_id
-            WHERE tasks.task_id='$task_id'
-            ")->fetch_assoc();
+            if(move_uploaded_file($tmp, $uploadPath)){
 
-            if($fac){
+                /* UPDATE TASK */
 
-                $conn->query("
-                INSERT INTO notifications
-                (user_id,message,type)
-                VALUES
-                (
-                    '{$fac['user_id']}',
-                    'Student submitted a task',
-                    'task'
-                )
+                $stmt = $conn->prepare("
+                UPDATE tasks
+                SET
+                    file=?,
+                    status='submitted'
+                WHERE task_id=?
                 ");
-            }
 
-            $success = "Task submitted successfully!";
+                $stmt->bind_param("si", $fileName, $task_id);
+                $stmt->execute();
+
+                /* ================= NOTIFY FACULTY ================= */
+
+                $fac = $conn->query("
+                SELECT faculty.user_id
+                FROM tasks
+                JOIN faculty
+                ON tasks.faculty_id = faculty.faculty_id
+                WHERE tasks.task_id='$task_id'
+                ")->fetch_assoc();
+
+                if($fac){
+
+                    $msg = "Student submitted a task";
+
+                    $stmt2 = $conn->prepare("
+                    INSERT INTO notifications
+                    (user_id,message,type)
+                    VALUES (?,?,?)
+                    ");
+
+                    $type = "task";
+
+                    $stmt2->bind_param(
+                        "iss",
+                        $fac['user_id'],
+                        $msg,
+                        $type
+                    );
+
+                    $stmt2->execute();
+                }
+
+                $success = "Task submitted successfully!";
+
+            } else {
+
+                $error = "File upload failed!";
+            }
 
         } else {
 
@@ -429,12 +459,12 @@ Submitted Tasks
 
 <td>
 
-<?php if(!empty($row['file'])){ ?>
+<?php if(!empty($row['file']) && file_exists("../uploads/".$row['file'])){ ?>
 
 <a
 class="view-btn"
 target="_blank"
-href="../uploads/<?= $row['file']; ?>">
+href="../uploads/<?= urlencode($row['file']); ?>">
 
 View File
 

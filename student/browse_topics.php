@@ -7,12 +7,30 @@ if($_SESSION['role'] != 'student'){
     exit();
 }
 
-$sql = "SELECT topics.*, users.name AS faculty_name
-        FROM topics
-        LEFT JOIN faculty ON topics.faculty_id = faculty.faculty_id
-        LEFT JOIN users ON faculty.user_id = users.id
-        WHERE topics.status='approved'
-        ORDER BY topics.topic_id DESC";
+$sql = "
+SELECT
+    topics.*,
+    users.name AS faculty_name,
+
+    (
+        SELECT COUNT(*)
+        FROM applications
+        WHERE applications.topic_id = topics.topic_id
+        AND applications.status='approved'
+    ) AS approved_students
+
+FROM topics
+
+LEFT JOIN faculty
+ON topics.faculty_id = faculty.faculty_id
+
+LEFT JOIN users
+ON faculty.user_id = users.id
+
+WHERE topics.status='approved'
+
+ORDER BY topics.topic_id DESC
+";
 
 $result = $conn->query($sql);
 ?>
@@ -237,6 +255,14 @@ if($result->num_rows > 0){
 while($row=$result->fetch_assoc()){
 
 $skills = explode(",", $row['skills_required']);
+
+$remaining =
+$row['max_students'] - $row['approved_students'];
+
+if($remaining < 0){
+    $remaining = 0;
+}
+
 ?>
 
 <div class="card">
@@ -244,7 +270,18 @@ $skills = explode(",", $row['skills_required']);
 <!-- HEADER -->
 <div class="card-header">
     <h3><?php echo $row['title']; ?></h3>
-    <span class="badge">Available</span>
+<span class="badge">
+
+<?php
+if($remaining > 0){
+    echo $remaining . " Seat(s) Left";
+}else{
+    echo "Full";
+}
+?>
+
+</span>
+
 </div>
 
 <!-- BODY -->

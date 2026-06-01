@@ -63,27 +63,6 @@ $rating = $ratingRow['avg_rating'] ? round($ratingRow['avg_rating'], 1) : 0;
 $success = "";
 
 /* ================= TASK UPLOAD ================= */
-
-if ($page == 'tasks' && isset($_POST['upload']) && isset($_FILES['file'])) {
-
-    $fileName = time() . '_' . basename($_FILES['file']['name']);
-    $target = "../uploads/" . $fileName;
-
-    $fileType = strtolower(pathinfo($target, PATHINFO_EXTENSION));
-
-    if ($fileType == "pdf") {
-
-        if (move_uploaded_file($_FILES['file']['tmp_name'], $target)) {
-
-            $conn->query("
-            INSERT INTO tasks(student_id,title,file,status)
-            VALUES('$student_id','Task Submission','$fileName','pending')
-            ");
-
-            $success = "Task uploaded successfully!";
-        }
-    }
-}
 ?>
 
 <!DOCTYPE html>
@@ -371,7 +350,7 @@ Profile
 
 <a class="<?=($page=='browse')?'active':''?>" href="?page=browse">
 <i class="fa-solid fa-book-open"></i>
-Browse Topics
+Browse Fields
 </a>
 
 <a class="<?=($page=='applications')?'active':''?>" href="?page=applications">
@@ -440,12 +419,6 @@ Back
 
 if($page == 'home'){
 ?>
-
-<div class="card">
-<h2>Student Dashboard</h2>
-<p>Track your academic progress, applications, tasks and reports.</p>
-</div>
-
 <div class="grid">
 
 <div class="box">
@@ -467,9 +440,6 @@ if($page == 'home'){
 
 <?php
 }
-
-
-/* ================= PROFILE ================= */
 /* ================= PROFILE ================= */
 elseif($page == 'profile'){
 
@@ -490,12 +460,12 @@ JOIN users ON faculty.user_id = users.id
 WHERE topics.status='approved'
 ");
 
-echo "
-<div class='card'>
-<h2>Browse Research Topics</h2>
-<p>Select approved topics and apply easily.</p>
-</div>
-";
+// echo "
+// <div class='card'>
+// <h2>Browse Research Topics</h2>
+// <p>Select approved topics and apply easily.</p>
+// </div>
+// ";
 
 while($row = $res->fetch_assoc()){
 
@@ -572,131 +542,304 @@ echo "</table>";
 echo "</div>";
 }
 
-/* ================= TASKS ================= */
+    /* ================= TASKS ================= */
 
-elseif($page == 'tasks'){
-?>
+    elseif($page == 'tasks'){
 
-<div class="card">
+        $success = "";
+        $error = "";
 
-<h2>Upload Task</h2>
+        /* ================= UPLOAD TASK ================= */
 
-<p>Upload your PDF task submission.</p>
+        if(isset($_POST['upload'])){
 
-<br>
+            $task_id = intval($_POST['task_id']);
 
-<form method="POST" enctype="multipart/form-data">
+            if(isset($_FILES['file']) && $_FILES['file']['error'] == 0){
 
-<input type="file" name="file" required>
+                $allowed = ['pdf','doc','docx','ppt','pptx','zip','rar'];
 
-<button class="btn" name="upload">
-<i class="fa-solid fa-upload"></i>
-Upload Task
-</button>
+                $file = $_FILES['file']['name'];
+                $tmp  = $_FILES['file']['tmp_name'];
 
-</form>
+                $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
 
-</div>
+                if(in_array($ext, $allowed)){
 
-<?php
+                    /* SAFE FILE NAME */
 
-$res = $conn->query("
-SELECT * FROM tasks
-WHERE student_id='$student_id'
-ORDER BY task_id DESC
-");
+                    $safeName = preg_replace("/[^a-zA-Z0-9._-]/", "_", $file);
 
-echo "
-<div class='card'>
-<h3>Submitted Tasks</h3>
-</div>
-";
+                    $fileName = time() . "_" . $safeName;
 
-echo "<div class='card table-container'>";
+                    /* UPLOAD DIRECTORY */
 
-echo "<table>";
+                    $uploadDir = "../uploads/";
 
-echo "
-<tr>
-<th>File</th>
-<th>Status</th>
-</tr>
-";
+                    if(!is_dir($uploadDir)){
+                        mkdir($uploadDir, 0777, true);
+                    }
 
-while($row = $res->fetch_assoc()){
+                    $target = $uploadDir . $fileName;
 
-$status = $row['status'] ?? 'pending';
+                    /* MOVE FILE */
 
-echo "
-<tr>
-<td>".htmlspecialchars($row['file'])."</td>
-<td class='{$status}'>".ucfirst($status)."</td>
-</tr>
-";
-}
+                    if(move_uploaded_file($tmp, $target)){
 
-echo "</table>";
+                        $conn->query("
+                        UPDATE tasks
+                        SET
+                            file='$fileName',
+                            status='submitted'
+                        WHERE task_id='$task_id'
+                        ");
 
-echo "</div>";
-}
+                        /* ================= NOTIFICATION ================= */
+
+                        $fac = $conn->query("
+                        SELECT faculty.user_id
+                        FROM tasks
+                        JOIN faculty
+                        ON tasks.faculty_id = faculty.faculty_id
+                        WHERE tasks.task_id='$task_id'
+                        ")->fetch_assoc();
+
+                        if($fac){
+
+                            $conn->query("
+                            INSERT INTO notifications
+                            (user_id,message,type)
+                            VALUES
+                            (
+                                '{$fac['user_id']}',
+                                'Student submitted a task',
+                                'task'
+                            )
+                            ");
+                        }
+
+                        $success = "Task uploaded successfully!";
+
+                    } else {
+
+                        $error = "File upload failed!";
+                    }
+
+                } else {
+
+                    $error = "Invalid file type!";
+                }
+
+            } else {
+
+                $error = "Please select a file.";
+            }
+        }
+
+        /* ================= ASSIGNED TASKS ================= */
+
+        $assigned = $conn->query("
+        SELECT *
+        FROM tasks
+        WHERE student_id='$student_id'
+        AND (
+            status='assigned'
+            OR status='rejected'
+            OR status=''
+            OR status IS NULL
+        )
+        ORDER BY task_id DESC
+        ");
+
+        /* ================= SUBMITTED TASKS ================= */
+
+        $submitted = $conn->query("
+        SELECT *
+        FROM tasks
+        WHERE student_id='$student_id'
+        AND status IN ('submitted','approved')
+        ORDER BY task_id DESC
+        ");
+    ?>
+
+    <?php if($success != ""){ ?>
+
+    <div class="alert">
+    <?= $success ?>
+    </div>
+
+    <?php } ?>
+
+    <?php if($error != ""){ ?>
+
+    <div class="alert" style="background:#fee2e2;color:#dc2626;">
+    <?= $error ?>
+    </div>
+
+    <?php } ?>
+
+    <!-- ================= ASSIGNED TASKS ================= -->
+
+    <div class="card">
+
+    <h2>Assigned Tasks</h2>
+
+    <p>Upload your assigned work.</p>
+
+    </div>
+
+    <div class="card table-container">
+
+    <?php if($assigned->num_rows > 0){ ?>
+
+    <table>
+
+    <tr>
+    <th>Title</th>
+    <th>Description</th>
+    <th>Status</th>
+    <th>Upload</th>
+    </tr>
+
+    <?php while($row = $assigned->fetch_assoc()){ ?>
+
+    <tr>
+
+    <td>
+    <?= htmlspecialchars($row['title']); ?>
+    </td>
+
+    <td>
+    <?= htmlspecialchars($row['description']); ?>
+    </td>
+
+    <td class="<?= $row['status']; ?>">
+    <?= ucfirst($row['status']); ?>
+    </td>
+
+    <td>
+
+    <form method="POST" enctype="multipart/form-data">
+
+    <input
+    type="hidden"
+    name="task_id"
+    value="<?= $row['task_id']; ?>">
+
+    <input
+    type="file"
+    name="file"
+    required>
+
+    <button class="btn" name="upload">
+
+    <i class="fa-solid fa-upload"></i>
+
+    Submit
+
+    </button>
+
+    </form>
+
+    </td>
+
+    </tr>
+
+    <?php } ?>
+
+    </table>
+
+    <?php } else { ?>
+
+    <p>No assigned tasks available.</p>
+
+    <?php } ?>
+
+    </div>
+
+    <!-- ================= SUBMITTED TASKS ================= -->
+
+    <div class="card">
+
+    <h2>Submitted Tasks</h2>
+
+    <p>View uploaded task files and status.</p>
+
+    </div>
+
+    <div class="card table-container">
+
+    <?php if($submitted->num_rows > 0){ ?>
+
+    <table>
+
+    <tr>
+    <th>Title</th>
+    <th>File</th>
+    <th>Status</th>
+    </tr>
+
+    <?php while($row = $submitted->fetch_assoc()){ ?>
+
+    <tr>
+
+    <td>
+    <?= htmlspecialchars($row['title']); ?>
+    </td>
+
+    <td>
+
+    <?php if(!empty($row['file'])){ ?>
+
+    <a
+    class="btn"
+    target="_blank"
+    href="../uploads/<?= urlencode($row['file']); ?>">
+
+    <i class="fa-solid fa-eye"></i>
+
+    View File
+
+    </a>
+
+    <?php } else { ?>
+
+    No File
+
+    <?php } ?>
+
+    </td>
+
+    <td class="<?= $row['status']; ?>">
+
+    <?= ucfirst($row['status']); ?>
+
+    </td>
+
+    </tr>
+
+    <?php } ?>
+
+    </table>
+
+    <?php } else { ?>
+
+    <p>No submitted tasks available.</p>
+
+    <?php } ?>
+
+    </div>
+
+    <?php
+    }
+
 
 /* ================= REPORTS ================= */
 
 elseif($page == 'reports'){
 
-$res = $conn->query("
-SELECT reports.*, users.name AS faculty_name
-FROM reports
-JOIN faculty ON faculty.faculty_id = reports.faculty_id
-JOIN users ON faculty.user_id = users.id
-WHERE reports.student_id='$student_id'
-ORDER BY reports.id DESC
-");
+    include "reports.php";
 
-echo "
-<div class='card'>
-<h2>Performance Reports</h2>
-<p>Review faculty feedback and ratings.</p>
-</div>
-";
-
-echo "<div class='card table-container'>";
-
-if($res && $res->num_rows > 0){
-
-echo "<table>";
-
-echo "
-<tr>
-<th>Faculty</th>
-<th>Feedback</th>
-<th>Rating</th>
-</tr>
-";
-
-while($row = $res->fetch_assoc()){
-
-echo "
-<tr>
-<td>".htmlspecialchars($row['faculty_name'])."</td>
-<td>".htmlspecialchars($row['feedback'])."</td>
-<td>".$row['rating']."/5</td>
-</tr>
-";
 }
 
-echo "</table>";
-
-}else{
-
-echo "<p>No reports available yet.</p>";
-}
-
-echo "</div>";
-}
 ?>
-
-</div>
-
-</body>
-</html>

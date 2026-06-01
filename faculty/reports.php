@@ -32,8 +32,8 @@ $faculty_id = $fac['faculty_id'];
 
 $students = $conn->query("
 SELECT DISTINCT
-users.id,
-users.name
+users.name,
+students.student_id
 
 FROM applications
 
@@ -60,61 +60,80 @@ $success = "";
 
 if(isset($_POST['submit'])){
 
-    $student_user_id = $_POST['student_id'];
+    $student_id = intval($_POST['student_id']);
 
     $feedback = trim($_POST['feedback']);
 
-    $rating = trim($_POST['rating']);
+    $rating = intval($_POST['rating']);
 
-    /* get student_id */
+    if(
+        empty($student_id) ||
+        empty($feedback) ||
+        empty($rating)
+    ){
 
-    $stu = $conn->query("
-    SELECT student_id
-    FROM students
-    WHERE user_id='$student_user_id'
-    ")->fetch_assoc();
+        $success = "All fields are required!";
 
-    $student_id = $stu['student_id'];
+    }else{
 
-    /* insert report */
+        $insert = $conn->query("
+        INSERT INTO reports
+        (
+            student_id,
+            faculty_id,
+            feedback,
+            rating,
+            report_date
+        )
+        VALUES
+        (
+            '$student_id',
+            '$faculty_id',
+            '$feedback',
+            '$rating',
+            NOW()
+        )
+        ");
 
-    $conn->query("
-    INSERT INTO reports
-    (
-        student_id,
-        faculty_id,
-        feedback,
-        rating,
-        report_date
-    )
-    VALUES
-    (
-        '$student_id',
-        '$faculty_id',
-        '$feedback',
-        '$rating',
-        NOW()
-    )
-    ");
+        if($insert){
 
-    /* notify student */
+            /* get student user id */
 
-    $conn->query("
-    INSERT INTO notifications
-    (
-        user_id,
-        message,
-        type
-    )
-    VALUES
-    (
-        '$student_user_id',
-        'New performance report received',
-        'report'
-    )
-    ");
+            $stuUser = $conn->query("
+            SELECT user_id
+            FROM students
+            WHERE student_id='$student_id'
+            ")->fetch_assoc();
 
-    $success = "Report submitted successfully!";
+            if($stuUser){
+
+                $student_user_id = $stuUser['user_id'];
+
+                /* notify student */
+
+                $conn->query("
+                INSERT INTO notifications
+                (
+                    user_id,
+                    message,
+                    type
+                )
+                VALUES
+                (
+                    '$student_user_id',
+                    'New performance report received',
+                    'report'
+                )
+                ");
+            }
+
+            $success = "Report submitted successfully!";
+
+        }else{
+
+            $success = "Database Error: " . $conn->error;
+        }
+    }
 }
 
 /* ================= REPORT HISTORY ================= */
@@ -286,8 +305,6 @@ small{
 
 <?php } ?>
 
-<!-- ================= CREATE REPORT ================= -->
-
 <div class="report-card">
 
 <h2>
@@ -312,7 +329,7 @@ Choose Student
 
 <?php while($s = $students->fetch_assoc()){ ?>
 
-<option value="<?= $s['id']; ?>">
+<option value="<?= $s['student_id']; ?>">
 
 <?= htmlspecialchars($s['name']); ?>
 
@@ -341,20 +358,20 @@ required></textarea>
 
 <select name="rating" required>
 
-<option value="Excellent">
-Excellent
+<option value="5">
+Excellent (5)
 </option>
 
-<option value="Good">
-Good
+<option value="4">
+Good (4)
 </option>
 
-<option value="Average">
-Average
+<option value="3">
+Average (3)
 </option>
 
-<option value="Poor">
-Poor
+<option value="2">
+Poor (2)
 </option>
 
 </select>
@@ -372,8 +389,6 @@ Submit Report
 </form>
 
 </div>
-
-<!-- ================= REPORT HISTORY ================= -->
 
 <div class="report-card">
 
@@ -400,7 +415,20 @@ Report History
 
 <?php while($row = $reports->fetch_assoc()){
 
-$class = strtolower($row['rating']);
+$rating = intval($row['rating']);
+
+if($rating >= 5){
+    $class = "excellent";
+}
+elseif($rating >= 4){
+    $class = "good";
+}
+elseif($rating >= 3){
+    $class = "average";
+}
+else{
+    $class = "poor";
+}
 
 ?>
 
@@ -426,7 +454,7 @@ $class = strtolower($row['rating']);
 
 <span class="rating <?= $class; ?>">
 
-<?= $row['rating']; ?>
+<?= $row['rating']; ?>/5
 
 </span>
 

@@ -31,6 +31,18 @@ $faculty_id = $faculty['faculty_id'];
 
 $success = "";
 
+/* ================= ADMIN FIXED LIMIT ================= */
+
+$limitData = $conn->query("
+SELECT setting_value
+FROM settings
+WHERE setting_name='max_student_limit'
+")->fetch_assoc();
+
+$fixed_limit = $limitData
+? intval($limitData['setting_value'])
+: 5;
+
 /* ================= CREATE TOPIC ================= */
 
 if(isset($_POST['create'])){
@@ -41,16 +53,33 @@ if(isset($_POST['create'])){
     $max = trim($_POST['max']);
     $deadline = trim($_POST['deadline']);
 
-    /* ===== VALIDATION ===== */
+    /* ================= VALIDATION ================= */
 
-    if(empty($title) || empty($desc) || empty($skills) || empty($max) || empty($deadline)){
+    if(
+        empty($title) ||
+        empty($desc) ||
+        empty($skills) ||
+        empty($max) ||
+        empty($deadline)
+    ){
+
         $success = "All fields are required!";
+
     }
-    elseif(!is_numeric($max) || $max < 1 || $max > 5){
-        $success = "Maximum students must be between 1 and 5 only!";
+    elseif(
+        !is_numeric($max) ||
+        $max < 1 ||
+        $max > $fixed_limit
+    ){
+
+        $success =
+        "Maximum students must be between 1 and "
+        .$fixed_limit.
+        " only!";
+
     }
     else{
-    
+
         $conn->query("
         INSERT INTO topics
         (
@@ -73,11 +102,37 @@ if(isset($_POST['create'])){
             'pending'
         )
         ");
-    
+
+
+            $admins = $conn->query("
+    SELECT id
+    FROM users
+    WHERE role='admin'
+    ");
+
+    while($admin = $admins->fetch_assoc()){
+
+        $conn->query("
+        INSERT INTO notifications
+        (
+            user_id,
+            message,
+            type
+        )
+        VALUES
+        (
+            '".$admin['id']."',
+            'A new topic \"$title\" has been submitted and is waiting for approval.',
+            'topic'
+        )
+        ");
+    }
+
         $success = "Topic submitted for admin approval!";
     }
 }
 ?>
+
 
 <style>
 
@@ -145,15 +200,16 @@ if(isset($_POST['create'])){
     background:#2563eb;
     color:white;
     border:none;
-    padding:16px 22px;
-    border-radius:14px;
+    padding:14px 24px;
+    border-radius:12px;
     cursor:pointer;
-    font-size:16px;
-    font-weight:bold;
-    transition:0.3s;
-    display:inline-flex;
+    font-size:15px;
+    font-weight:600;
+    display:flex;
     align-items:center;
+    justify-content:center;
     gap:10px;
+    transition:0.3s;
 }
 
 .submit-btn:hover{
@@ -235,16 +291,30 @@ required>
 <input
 type="number"
 name="max"
+id="max_students"
 placeholder="Enter maximum students"
 min="1"
-max="5"
+max="<?= $fixed_limit ?>"
 required>
+
+<small
+id="limitMessage"
+style="
+color:#dc2626;
+font-weight:600;
+display:none;
+margin-top:8px;
+display:block;
+">
+</small>
 
 </div>
 
+
+
 <div class="form-group">
 
-<label>Deadline</label>
+<label>Created Date</label>
 
 <input
 type="date"
@@ -257,12 +327,44 @@ required>
 
 <i class="fa-solid fa-paper-plane"></i>
 
-Submit
+<span>Submit Topic</span>
 
 </button>
 
 </form>
 
 </div>
+
+
+<script>
+
+const maxInput = document.getElementById("max_students");
+
+const limitMessage = document.getElementById("limitMessage");
+
+const fixedLimit = <?= $fixed_limit ?>;
+
+maxInput.addEventListener("input", function(){
+
+    let value = parseInt(this.value);
+
+    if(value > fixedLimit){
+
+        limitMessage.style.display = "block";
+
+        limitMessage.innerHTML =
+        "Maximum allowed students is "
+        + fixedLimit;
+
+        this.value = fixedLimit;
+
+    }else{
+
+        limitMessage.style.display = "none";
+    }
+});
+
+</script>
+
 
 </div>

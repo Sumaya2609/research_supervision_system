@@ -279,7 +279,7 @@ AND status='approved'
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Smart Topic Matching</title>
+<title>Smart Research Fields Matching</title>
 
 <link rel="stylesheet"
 href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
@@ -475,7 +475,7 @@ body{
 <div>
 <h1>
 <i class="fa-solid fa-brain"></i>
-Smart Topic Matching
+Smart Research Fields Matching
 </h1>
 
 <p>
@@ -526,27 +526,73 @@ Back
 <?= htmlspecialchars($t['skills_required']) ?>
 </p>
 
-<p>
-<b>Available Seats:</b>
-<?= $t['max_students'] ?>
-</p>
 
-<form method="POST">
+<!-- ================= COUNT SEAT ================= -->
 
-<input
-type="hidden"
-name="topic_id"
-value="<?= $t['topic_id'] ?>"
->
+<?php
 
-<button class="btn apply-btn" name="apply">
+    $seatInfo = $conn->query("
+    SELECT COUNT(*) AS total
+    FROM applications
+    WHERE topic_id='{$t['topic_id']}'
+    AND status='approved'
+    ")->fetch_assoc();
 
-<i class="fa-solid fa-paper-plane"></i>
-Apply Now
+    $remaining = $t['max_students'] - $seatInfo['total'];
 
-</button>
+    if($remaining < 0){
+        $remaining = 0;
+    }
 
-</form>
+    ?>
+
+    <p>
+    <b>Available Seats:</b>
+
+    <?php
+    if($remaining > 0){
+        echo $remaining;
+    }else{
+        echo "Full";
+    }
+    ?>
+    </p>
+
+    <form method="POST">
+
+    <input
+    type="hidden"
+    name="topic_id"
+    value="<?= $t['topic_id'] ?>"
+    >
+
+    <?php if($remaining > 0){ ?>
+
+    <button class="btn apply-btn" name="apply">
+
+    <i class="fa-solid fa-paper-plane"></i>
+    Apply Now
+
+    </button>
+
+    <?php } else { ?>
+
+    <button
+    class="btn apply-btn"
+    disabled
+    style="
+    background:#94a3b8;
+    cursor:not-allowed;
+    ">
+
+    <i class="fa-solid fa-ban"></i>
+    Full
+
+    </button>
+
+    <?php } ?>
+
+    </form>
 
 </div>
 

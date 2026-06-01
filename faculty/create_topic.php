@@ -131,6 +131,13 @@ if(isset($_POST['create'])){
         $success = "Topic submitted for admin approval!";
     }
 }
+
+$myTopics = $conn->query("
+SELECT *
+FROM topics
+WHERE faculty_id='$faculty_id'
+ORDER BY topic_id DESC
+");
 ?>
 
 
@@ -335,13 +342,81 @@ required>
 
 </div>
 
+<hr style="margin:40px 0;">
+
+<h2>
+<i class="fa-solid fa-list"></i>
+My Research Fields
+</h2>
+
+<br>
+
+<?php if($myTopics->num_rows > 0){ ?>
+
+<table style="
+width:100%;
+border-collapse:collapse;
+background:white;
+">
+
+<tr style="background:#2563eb;color:white;">
+    <th style="padding:12px;">Title</th>
+    <th>Status</th>
+    <th>Max Students</th>
+    <th>Actions</th>
+</tr>
+
+<?php while($topic = $myTopics->fetch_assoc()){ ?>
+
+<tr>
+    <td style="padding:12px;">
+        <?= htmlspecialchars($topic['title']) ?>
+    </td>
+
+    <td>
+        <?= ucfirst($topic['status']) ?>
+    </td>
+
+    <td>
+        <?= $topic['max_students'] ?>
+    </td>
+
+    <td>
+
+        <a
+        href="edit_topic.php?id=<?= $topic['topic_id'] ?>"
+        class="btn"
+        style="padding:8px 12px;">
+            <i class="fa-solid fa-pen"></i>
+            Edit
+        </a>
+
+        <a
+        href="delete_topic.php?id=<?= $topic['topic_id'] ?>"
+        class="btn"
+        style="background:#dc2626;padding:8px 12px;"
+        onclick="return confirm('Delete this topic?')">
+            <i class="fa-solid fa-trash"></i>
+            Delete
+        </a>
+
+    </td>
+</tr>
+
+<?php } ?>
+
+</table>
+
+<?php } else { ?>
+
+<p>No research fields created yet.</p>
+
+<?php } ?>
 
 <script>
 
 const maxInput = document.getElementById("max_students");
-
 const limitMessage = document.getElementById("limitMessage");
-
 const fixedLimit = <?= $fixed_limit ?>;
 
 maxInput.addEventListener("input", function(){
@@ -351,10 +426,8 @@ maxInput.addEventListener("input", function(){
     if(value > fixedLimit){
 
         limitMessage.style.display = "block";
-
         limitMessage.innerHTML =
-        "Maximum allowed students is "
-        + fixedLimit;
+        "Maximum allowed students is " + fixedLimit;
 
         this.value = fixedLimit;
 
@@ -365,6 +438,5 @@ maxInput.addEventListener("input", function(){
 });
 
 </script>
-
 
 </div>

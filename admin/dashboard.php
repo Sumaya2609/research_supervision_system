@@ -443,7 +443,7 @@
                 <a class="<?php if($page=='settings') echo 'active'; ?>"
                 href="?page=settings">
                 <i class="fa fa-gear"></i>
-                <span>Seat Settings</span>
+                <span>Seat Limit</span>
                 </a>
 
 
@@ -1295,10 +1295,11 @@ $res = $conn->query($sql);
                     ");
                 }
 
-                        $sql = "SELECT topics.*, users.name
-                                FROM topics
-                                JOIN faculty ON topics.faculty_id = faculty.faculty_id
-                                JOIN users ON faculty.user_id = users.id";
+                $sql = "SELECT topics.*, users.name
+                FROM topics
+                JOIN faculty ON topics.faculty_id = faculty.faculty_id
+                JOIN users ON faculty.user_id = users.id
+                ORDER BY topics.topic_id DESC";
 
                         $res = $conn->query($sql);
 

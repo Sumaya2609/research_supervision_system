@@ -453,7 +453,7 @@ this
 Select a Student
 </h3>
 
-<p>Online</p>
+
 
 </div>
 

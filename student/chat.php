@@ -442,9 +442,7 @@ this
 Select a Faculty
 </h3>
 
-<p>
-Online
-</p>
+
 
 </div>
 

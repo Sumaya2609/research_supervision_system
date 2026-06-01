@@ -7,6 +7,9 @@ if($_SESSION['role'] != 'student'){
     exit();
 }
 
+$search_topic = trim($_GET['topic'] ?? '');
+$search_faculty = trim($_GET['faculty'] ?? '');
+
 $sql = "
 SELECT
     topics.*,
@@ -28,11 +31,29 @@ LEFT JOIN users
 ON faculty.user_id = users.id
 
 WHERE topics.status='approved'
+";
 
+if(!empty($search_topic)){
+    $sql .= "
+    AND topics.title
+    LIKE '%".$conn->real_escape_string($search_topic)."%'
+    ";
+}
+
+if(!empty($search_faculty)){
+    $sql .= "
+    AND users.name
+    LIKE '%".$conn->real_escape_string($search_faculty)."%'
+    ";
+}
+
+$sql .= "
 ORDER BY topics.topic_id DESC
 ";
 
 $result = $conn->query($sql);
+
+
 ?>
 
 <!DOCTYPE html>
@@ -46,181 +67,227 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
 <style>
 
 /* GLOBAL */
-body{
-    margin:0;
-    font-family:'Segoe UI', sans-serif;
-    background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);
-    color:white;
-}
+    body{
+        margin:0;
+        font-family:'Segoe UI', sans-serif;
+        background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);
+        color:white;
+    }
 
-/* SIDEBAR */
-.sidebar{
-    width:240px;
-    height:100vh;
-    background:rgba(40,90,72,0.95);
-    position:fixed;
-    padding-top:20px;
-    backdrop-filter:blur(10px);
-}
+    /* SIDEBAR */
+    .sidebar{
+        width:240px;
+        height:100vh;
+        background:rgba(40,90,72,0.95);
+        position:fixed;
+        padding-top:20px;
+        backdrop-filter:blur(10px);
+    }
 
-.sidebar h2{
-    text-align:center;
-    color:#B0E4CC;
-    margin-bottom:25px;
-}
+    .sidebar h2{
+        text-align:center;
+        color:#B0E4CC;
+        margin-bottom:25px;
+    }
 
-.sidebar a{
-    display:block;
-    color:#B0E4CC;
-    padding:14px 20px;
-    text-decoration:none;
-    transition:0.3s;
-}
+    .sidebar a{
+        display:block;
+        color:#B0E4CC;
+        padding:14px 20px;
+        text-decoration:none;
+        transition:0.3s;
+    }
 
-.sidebar a:hover{
-    background:#408A71;
-    padding-left:25px;
-}
+    .sidebar a:hover{
+        background:#408A71;
+        padding-left:25px;
+    }
 
-/* MAIN */
-.main{
-    margin-left:240px;
-    padding:30px;
-}
+    /* MAIN */
+    .main{
+        margin-left:240px;
+        padding:30px;
+    }
 
-/* HEADER */
-.header{
-    margin-bottom:25px;
-}
+    /* HEADER */
+    .header{
+        margin-bottom:25px;
+    }
 
-.header h2{
-    font-size:30px;
-    margin:0;
-}
+    .header h2{
+        font-size:30px;
+        margin:0;
+    }
 
-.header p{
-    color:#ddd;
-    margin-top:5px;
-}
+    .header p{
+        color:#ddd;
+        margin-top:5px;
+    }
 
-/* GRID */
-.grid{
-    display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(320px,1fr));
-    gap:25px;
-}
+    /* GRID */
+    .grid{
+        display:grid;
+        grid-template-columns:repeat(auto-fit,minmax(320px,1fr));
+        gap:25px;
+    }
 
-/* CARD */
-.card{
-    background:white;
-    color:#091413;
-    border-radius:15px;
-    padding:20px;
-    box-shadow:0 10px 25px rgba(0,0,0,0.3);
-    transition:0.3s;
-    display:flex;
-    flex-direction:column;
-    justify-content:space-between;
-}
+    /* CARD */
+    .card{
+        background:white;
+        color:#091413;
+        border-radius:15px;
+        padding:20px;
+        box-shadow:0 10px 25px rgba(0,0,0,0.3);
+        transition:0.3s;
+        display:flex;
+        flex-direction:column;
+        justify-content:space-between;
+    }
 
-.card:hover{
-    transform:translateY(-6px);
-    box-shadow:0 20px 40px rgba(0,0,0,0.4);
-}
+    .card:hover{
+        transform:translateY(-6px);
+        box-shadow:0 20px 40px rgba(0,0,0,0.4);
+    }
 
-/* CARD HEADER */
-.card-header{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-}
+    /* CARD HEADER */
+    .card-header{
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+    }
 
-.card-header h3{
-    margin:0;
-    color:#285A48;
-}
+    .card-header h3{
+        margin:0;
+        color:#285A48;
+    }
 
-/* BADGE */
-.badge{
-    background:#27ae60;
-    color:white;
-    padding:5px 10px;
-    border-radius:20px;
-    font-size:11px;
-}
+    /* BADGE */
+    .badge{
+        background:#27ae60;
+        color:white;
+        padding:5px 10px;
+        border-radius:20px;
+        font-size:11px;
+    }
 
-/* FACULTY */
-.faculty{
-    display:flex;
-    align-items:center;
-    margin:10px 0;
-}
+    /* FACULTY */
+    .faculty{
+        display:flex;
+        align-items:center;
+        margin:10px 0;
+    }
 
-.avatar{
-    width:35px;
-    height:35px;
-    border-radius:50%;
-    background:#285A48;
-    color:white;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    margin-right:10px;
-}
+    .avatar{
+        width:35px;
+        height:35px;
+        border-radius:50%;
+        background:#285A48;
+        color:white;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        margin-right:10px;
+    }
 
-/* DESCRIPTION */
-.desc{
-    font-size:14px;
-    color:#333;
-    margin:10px 0;
-    line-height:1.5;
-}
+    /* DESCRIPTION */
+    .desc{
+        font-size:14px;
+        color:#333;
+        margin:10px 0;
+        line-height:1.5;
+    }
 
-/* SKILLS */
-.skills{
-    margin-top:10px;
-}
+    /* SKILLS */
+    .skills{
+        margin-top:10px;
+    }
 
-.skill-tag{
-    display:inline-block;
-    background:#285A48;
-    color:white;
-    padding:5px 10px;
-    border-radius:20px;
-    font-size:12px;
-    margin:3px;
-}
+    .skill-tag{
+        display:inline-block;
+        background:#285A48;
+        color:white;
+        padding:5px 10px;
+        border-radius:20px;
+        font-size:12px;
+        margin:3px;
+    }
 
-/* FOOTER */
-.card-footer{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    margin-top:15px;
-}
+    /* FOOTER */
+    .card-footer{
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        margin-top:15px;
+    }
 
-/* CTA TEXT */
-.apply-text{
-    font-size:13px;
-    color:#555;
-}
+    /* CTA TEXT */
+    .apply-text{
+        font-size:13px;
+        color:#555;
+    }
 
-/* BUTTON */
-.btn{
-    background:linear-gradient(135deg,#285A48,#40916c);
-    color:white;
-    padding:10px 16px;
-    border-radius:8px;
-    text-decoration:none;
-    font-weight:bold;
-    transition:0.3s;
-    box-shadow:0 5px 15px rgba(0,0,0,0.3);
-}
+    /* BUTTON */
+    .btn{
+        background:linear-gradient(135deg,#285A48,#40916c);
+        color:white;
+        padding:10px 16px;
+        border-radius:8px;
+        text-decoration:none;
+        font-weight:bold;
+        transition:0.3s;
+        box-shadow:0 5px 15px rgba(0,0,0,0.3);
+    }
 
-.btn:hover{
-    transform:translateY(-2px) scale(1.05);
-    box-shadow:0 10px 25px rgba(0,0,0,0.4);
-}
+    .btn:hover{
+        transform:translateY(-2px) scale(1.05);
+        box-shadow:0 10px 25px rgba(0,0,0,0.4);
+    }
+
+    .search-box{
+        margin-bottom:30px;
+    }
+
+    .search-grid{
+        display:grid;
+        grid-template-columns:1fr 1fr auto auto;
+        gap:12px;
+    }
+
+    .search-grid input{
+        padding:14px;
+        border:none;
+        border-radius:12px;
+        font-size:15px;
+        outline:none;
+    }
+
+    .search-btn{
+        background: #27ae60;
+        color: white;
+        border: none;
+        padding: 14px 20px;
+        border-radius: 12px;
+        cursor: pointer;
+        font-weight: bold;
+    }
+
+    .search-btn:hover{
+        background:#219150;
+    }
+
+    .reset-btn{
+        background: #dc2626;
+        color: white;
+        text-decoration: none;
+        padding: 14px 20px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+    }
+
+    .reset-btn:hover{
+        background:#b91c1c;
+    }
 
 </style>
 
@@ -229,110 +296,134 @@ body{
 <body>
 
 <!-- SIDEBAR -->
-<div class="sidebar">
+    <div class="sidebar">
 
-<h2><i class="fa fa-user-graduate"></i> Student</h2>
+        <h2><i class="fa fa-user-graduate"></i> Student</h2>
 
-<a href="dashboard.php"><i class="fa fa-home"></i> Dashboard</a>
-<a href="profile.php"><i class="fa fa-user"></i> Profile</a>
-<a href="browse_topics.php"><i class="fa fa-search"></i> Browse Topics</a>
-<a href="my_applications.php"><i class="fa fa-file"></i> My Applications</a>
+        <a href="dashboard.php"><i class="fa fa-home"></i> Dashboard</a>
+        <a href="profile.php"><i class="fa fa-user"></i> Profile</a>
+        <a href="browse_topics.php"><i class="fa fa-search"></i> Browse Topics</a>
+        <a href="my_applications.php"><i class="fa fa-file"></i> My Applications</a>
 
-</div>
+    </div>
 
-<!-- MAIN -->
-<div class="main">
+        <!-- MAIN -->
+        <div class="main">
 
-<div class="header">
-<h2>Explore Research Topics</h2>
-<p>Find topics that match your passion and skills</p>
-</div>
+        <div class="header">
+            <h2>Explore Research Topics</h2>
+            <p>Find topics that match your passion and skills</p>
+        </div>
 
-<div class="grid">
+        <div class="search-box">
 
-<?php
-if($result->num_rows > 0){
-while($row=$result->fetch_assoc()){
+            <form method="GET">
 
-$skills = explode(",", $row['skills_required']);
+                <div class="search-grid">
 
-$remaining =
-$row['max_students'] - $row['approved_students'];
+                    <input
+                    type="text"
+                    name="topic"
+                    placeholder="Search Topic..."
+                    value="<?php echo htmlspecialchars($search_topic); ?>">
+                    <input
+                    type="text"
+                    name="faculty"
+                    placeholder="Search Faculty..."
+                    value="<?php echo htmlspecialchars($search_faculty); ?>">
+                    <button class="search-btn">
+                    <i class="fa fa-search"></i>
+                    Search
+                    </button>
+                    <a href="browse_topics.php" class="reset-btn">Reset</a>
+                </div>
+            </form>
+        </div>
+        <div class="grid">
 
-if($remaining < 0){
-    $remaining = 0;
-}
+        <?php
+        if($result->num_rows > 0){
+        while($row=$result->fetch_assoc()){
 
-?>
+        $skills = explode(",", $row['skills_required']);
 
-<div class="card">
+        $remaining =
+        $row['max_students'] - $row['approved_students'];
 
-<!-- HEADER -->
-<div class="card-header">
-    <h3><?php echo $row['title']; ?></h3>
-<span class="badge">
+        if($remaining < 0){
+            $remaining = 0;
+        }
 
-<?php
-if($remaining > 0){
-    echo $remaining . " Seat(s) Left";
-}else{
-    echo "Full";
-}
-?>
+        ?>
 
-</span>
+        <div class="card">
 
-</div>
+        <!-- HEADER -->
+        <div class="card-header">
+            <h3><?php echo $row['title']; ?></h3>
+        <span class="badge">
 
-<!-- BODY -->
-<div>
+        <?php
+        if($remaining > 0){
+            echo $remaining . " Seat(s) Left";
+        }else{
+            echo "Full";
+        }
+        ?>
 
-<div class="faculty">
-<div class="avatar">
-<?php echo strtoupper(substr($row['faculty_name'],0,1)); ?>
-</div>
-<div><?php echo $row['faculty_name']; ?></div>
-</div>
+        </span>
 
-<div class="desc">
-<?php echo $row['description']; ?>
-</div>
+        </div>
 
-<div class="skills">
-<?php
-foreach($skills as $skill){
-echo "<span class='skill-tag'>".trim($skill)."</span>";
-}
-?>
-</div>
+    <!-- BODY -->
+    <div>
 
-</div>
+    <div class="faculty">
+    <div class="avatar">
+    <?php echo strtoupper(substr($row['faculty_name'],0,1)); ?>
+    </div>
+    <div><?php echo $row['faculty_name']; ?></div>
+    </div>
 
-<!-- FOOTER -->
-<div class="card-footer">
+    <div class="desc">
+    <?php echo $row['description']; ?>
+    </div>
 
-<div class="apply-text">
-Want to apply? Click here →
-</div>
+    <div class="skills">
+    <?php
+    foreach($skills as $skill){
+    echo "<span class='skill-tag'>".trim($skill)."</span>";
+    }
+    ?>
+    </div>
 
-<a class="btn"
-href="apply.php?topic_id=<?php echo $row['topic_id']; ?>">
-<i class="fa fa-paper-plane"></i> Apply
-</a>
+    </div>
 
-</div>
+    <!-- FOOTER -->
+    <div class="card-footer">
 
-</div>
+    <div class="apply-text">
+    Want to apply? Click here →
+    </div>
 
-<?php }} else { ?>
+    <a class="btn"
+    href="apply.php?topic_id=<?php echo $row['topic_id']; ?>">
+    <i class="fa fa-paper-plane"></i> Apply
+    </a>
 
-<p>No topics available.</p>
+    </div>
 
-<?php } ?>
+    </div>
 
-</div>
+    <?php }} else { ?>
 
-</div>
+    <p>No topics available.</p>
+
+    <?php } ?>
+
+    </div>
+
+    </div>
 
 </body>
 </html>

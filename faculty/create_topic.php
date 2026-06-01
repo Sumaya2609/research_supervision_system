@@ -131,6 +131,13 @@ if(isset($_POST['create'])){
         $success = "Topic submitted for admin approval!";
     }
 }
+
+$myTopics = $conn->query("
+SELECT *
+FROM topics
+WHERE faculty_id='$faculty_id'
+ORDER BY topic_id DESC
+");
 ?>
 
 
@@ -335,7 +342,185 @@ required>
 
 </div>
 
+<hr style="margin:40px 0;">
 
+<h2>
+<i class="fa-solid fa-list"></i>
+My Research Fields
+</h2>
+
+<br>
+
+<?php if($myTopics->num_rows > 0){ ?>
+
+<table style="
+width:100%;
+border-collapse:collapse;
+background:white;
+">
+
+<tr style="background:#2563eb;color:white;">
+    <th style="padding:12px;">Title</th>
+    <th>Status</th>
+    <th>Max Students</th>
+    <th>Actions</th>
+</tr>
+
+<?php while($topic = $myTopics->fetch_assoc()){ ?>
+
+<tr>
+
+<td style="padding:12px;">
+<?= htmlspecialchars($topic['title']) ?>
+</td>
+
+<td>
+<?= ucfirst($topic['status']) ?>
+</td>
+
+<td>
+<?= $topic['max_students'] ?>
+</td>
+
+<td>
+
+<a
+href="edit_topic.php?id=<?= $topic['topic_id'] ?>"
+class="btn"
+style="padding:8px 12px;"
+>
+<i class="fa-solid fa-pen"></i>
+Edit
+</a>
+
+<a
+href="delete_topic.php?id=<?= $topic['topic_id'] ?>"
+class="btn"
+style="background:#dc2626;padding:8px 12px;"
+onclick="return confirm('Delete this topic?')"
+>
+<i class="fa-solid fa-trash"></i>
+Delete
+</a>
+
+</td>
+
+</tr>
+
+<?php } ?>
+
+</table>
+
+<?php } else { ?>
+
+<p>No research fields created yet.</p>
+
+<?php } ?>
+<?php
+session_start();
+include "../db.php";
+
+if(!isset($_SESSION['user_id']) || $_SESSION['role'] != 'faculty'){
+    header("Location: ../login.php");
+    exit();
+}
+
+$user_id = $_SESSION['user_id'];
+
+$id = intval($_GET['id']);
+
+$conn->query("
+DELETE topics
+FROM topics
+JOIN faculty
+ON topics.faculty_id = faculty.faculty_id
+WHERE topics.topic_id='$id'
+AND faculty.user_id='$user_id'
+");
+
+header("Location: dashboard.php?page=create_topic");
+exit();
+?>
+
+<?php
+session_start();
+include "../db.php";
+
+if(!isset($_SESSION['user_id']) || $_SESSION['role']!='faculty'){
+    header("Location: ../login.php");
+    exit();
+}
+
+$id = intval($_GET['id']);
+
+$topic = $conn->query("
+SELECT *
+FROM topics
+WHERE topic_id='$id'
+")->fetch_assoc();
+
+if(isset($_POST['update'])){
+
+    $title = $_POST['title'];
+    $description = $_POST['description'];
+    $skills = $_POST['skills'];
+    $max = $_POST['max'];
+
+    $conn->query("
+    UPDATE topics
+    SET
+    title='$title',
+    description='$description',
+    skills_required='$skills',
+    max_students='$max',
+    status='pending'
+    WHERE topic_id='$id'
+    ");
+
+    header("Location: dashboard.php?page=create_topic");
+    exit();
+}
+?>
+
+<form method="POST">
+
+<input
+type="text"
+name="title"
+value="<?= htmlspecialchars($topic['title']) ?>"
+required>
+
+<br><br>
+
+<textarea
+name="description"
+required><?= htmlspecialchars($topic['description']) ?></textarea>
+
+<br><br>
+
+<input
+type="text"
+name="skills"
+value="<?= htmlspecialchars($topic['skills_required']) ?>"
+required>
+
+<br><br>
+
+<input
+type="number"
+name="max"
+value="<?= $topic['max_students'] ?>"
+required>
+
+<br><br>
+
+<button name="update">
+Update Topic
+</button>
+
+</form>
+
+    
 <script>
 
 const maxInput = document.getElementById("max_students");
